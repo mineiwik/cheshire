@@ -20,29 +20,23 @@
 uint32_t __attribute__((section(".data"))) semaphore = 0x0;
 
 void semaphore_wait() {
-    asm volatile (
-        "   li t0, 1                    \n"
-        "1:                             \n"
-        "   amoswap.w.aq t0, t0, (%0)   \n"
-        "   bnez t0, 1b                 \n"
-        ::"r"(&semaphore)
-    );
+    asm volatile("   li t0, 1                    \n"
+                 "1:                             \n"
+                 "   amoswap.w.aq t0, t0, (%0)   \n"
+                 "   bnez t0, 1b                 \n" ::"r"(&semaphore));
 }
 
 void semaphore_post() {
-    asm volatile (
-        "   amoswap.w.rl zero, zero, (%0)   \n"
-        ::"r"(&semaphore)
-    );
+    asm volatile("   amoswap.w.rl zero, zero, (%0)   \n" ::"r"(&semaphore));
 }
 
 int main(void) {
 
-    uint64_t hart_id   = get_mhartid();
+    uint64_t hart_id = get_mhartid();
     uint32_t num_harts = *reg32(&__base_regs, CHESHIRE_NUM_INT_HARTS_REG_OFFSET);
 
     if (hart_id == 0) {
-        uint32_t rtc_freq   = *reg32(&__base_regs, CHESHIRE_RTC_FREQ_REG_OFFSET);
+        uint32_t rtc_freq = *reg32(&__base_regs, CHESHIRE_RTC_FREQ_REG_OFFSET);
         uint64_t reset_freq = clint_get_core_freq(rtc_freq, 2500);
         uart_init(&__base_uart, reset_freq, __BOOT_BAUDRATE);
         smp_barrier_init();
@@ -51,7 +45,7 @@ int main(void) {
 
     smp_barrier_up(num_harts);
 
-    for (uint64_t i=0; i<1; i++) {
+    for (uint64_t i = 0; i < 1; i++) {
         semaphore_wait();
         printf("Core %d/%d up\n", hart_id, num_harts);
         uart_write_flush(&__base_uart);
